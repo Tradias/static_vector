@@ -28,7 +28,7 @@ DeriveLineEnding:       true
 
 # The way to use tab characters in the resulting file.
 # Possible values: Never, ForIndentation, ForContinuationAndIndentation, AlignWithSpaces, Always
-UseTab:                 Always
+UseTab:                 Never
 
 
 # The column limit.
