@@ -1,6 +1,8 @@
 #pragma once
-#include <iterator>
 #include <ml/details/lazy_initialized_storage.hpp>
+
+#include <iterator>
+
 
 namespace ml::details
 {

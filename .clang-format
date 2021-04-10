@@ -401,7 +401,7 @@ PointerAlignment:                       Left
 
 # Dependent on the value, multiple #include blocks can be sorted as one and divided based on category.
 # Possible values: Preserve, Merge, Regroup.
-IncludeBlocks:   Preserve
+IncludeBlocks:   Regroup
 
 
 # Controls if and how clang-format will sort #includes.
@@ -411,6 +411,22 @@ IncludeBlocks:   Preserve
 # Possible values: Never, CaseInsensitives, CaseSensitive.
 SortIncludes:    CaseSensitive
 
+# Regular expressions denoting the different #include categories used for ordering #includes.
+# POSIX extended regular expressions are supported.
+# These regular expressions are matched against the filename of an include (including the <> or “”) in order.
+# The value belonging to the first matching regular expression is assigned and #includes are sorted
+# first according to increasing category number and then alphabetically within each category.
+#
+# There is a third and optional field SortPriority which can used while IncludeBlocks = IBS_Regroup to define
+# the priority in which #includes should be ordered.
+# The value of Priority defines the order of #include blocks and also allows the grouping of #includes of different priority.
+# SortPriority is set to the value of Priority as default if it is not assigned.
+#
+# Each regular expression can be marked as case sensitive with the field CaseSensitive, per default it is not.
+IncludeCategories:
+  - Regex: '<ml\/.*'
+    Priority: 1
+    SortPriority: 1
 
 # --------------------------------------------------------------------------- #
 # === Spaces ================================================================ #

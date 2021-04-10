@@ -1,7 +1,8 @@
 #pragma once
+#include <ml/details/storage_iterator.hpp>
+
 #include <algorithm>
 #include <array>
-#include <ml/details/storage_iterator.hpp>
 #include <stdexcept>
 
 namespace ml
