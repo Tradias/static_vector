@@ -15,10 +15,9 @@ namespace ml
       requires (!std::is_const_v<ValueT>);
       requires (!std::is_volatile_v<ValueT>);
     }
-  class static_vector
-  {
+  class static_vector {
   private:
-    using storage_type = details::lazy_initialized_storage<ValueT>;
+    using storage_type = details::lazy_storage<ValueT>;
 
     std::size_t m_size {};
     std::array<storage_type, StaticSize> m_storage {};

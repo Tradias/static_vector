@@ -1,7 +1,6 @@
 #pragma once
 #include <concepts>
 #include <memory>
-#include <type_traits>
 #include <utility>
 
 namespace ml::details
@@ -13,15 +12,11 @@ namespace ml::details
       requires (!std::is_const_v<ValueT>);
       requires (!std::is_volatile_v<ValueT>);
     }
-  union lazy_initialized_storage final
-  {
+  union lazy_storage final {
   private:
-    struct empty_type
-    {};
+    struct empty_type {};
 
-    [[no_unique_address]] //
     empty_type m_empty {};
-    [[no_unique_address]] //
     ValueT m_value;
 
   public:
@@ -31,21 +26,20 @@ namespace ml::details
     using reference = ValueT&;
     using const_reference = ValueT const&;
 
-    lazy_initialized_storage () = default;
+    lazy_storage () = default;
 
     template<class T>
-    constexpr explicit(!std::convertible_to<T, ValueT>)     //
-      lazy_initialized_storage (T&& init)                   //
+    explicit(!std::convertible_to<T, ValueT>)               //
+      constexpr lazy_storage (T&& init)                     //
       noexcept (std::is_nothrow_constructible_v<ValueT, T>) //
       requires (std::constructible_from<ValueT, T>)         //
       : m_value (std::forward<T> (init))
     {}
 
     template<class... Args>
-    constexpr explicit                                            //
-      lazy_initialized_storage (std::in_place_t, Args&&... args)  //
-      noexcept (std::is_nothrow_constructible_v<ValueT, Args...>) //
-      requires (std::constructible_from<ValueT, Args...>)         //
+    explicit constexpr lazy_storage (std::in_place_t, Args&&... args) //
+      noexcept (std::is_nothrow_constructible_v<ValueT, Args...>)     //
+      requires (std::constructible_from<ValueT, Args...>)             //
       : m_value (std::forward<Args> (args)...)
     {}
 
@@ -114,6 +108,6 @@ namespace ml::details
   };
 
   template<class T>
-  lazy_initialized_storage (T&&) -> lazy_initialized_storage<std::remove_cvref_t<T>>;
+  lazy_storage (T&&) -> lazy_storage<std::remove_cvref_t<T>>;
 
 } // namespace ml::details

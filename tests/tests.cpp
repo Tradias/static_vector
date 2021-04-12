@@ -1,4 +1,5 @@
 #include <ml/static_vector/static_vector.hpp>
+
 #include <span>
 
 namespace ml

@@ -191,7 +191,7 @@ BraceWrapping:
 
 
 # Wrap class definitions.
-  AfterClass:      true
+  AfterClass:      false
 
 
 # Wrap control statements (if/for/while/switch/..).
@@ -212,11 +212,11 @@ BraceWrapping:
 
 
 # Wrap struct definitions.
-  AfterStruct:     true
+  AfterStruct:     false
 
 
 # Wrap union definitions.
-  AfterUnion:      true
+  AfterUnion:      false
 
 
 # Wrap extern blocks.

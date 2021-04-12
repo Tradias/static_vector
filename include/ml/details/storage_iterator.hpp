@@ -1,8 +1,7 @@
 #pragma once
-#include <ml/details/lazy_initialized_storage.hpp>
+#include <ml/details/lazy_storage.hpp>
 
 #include <iterator>
-
 
 namespace ml::details
 {
@@ -10,13 +9,11 @@ namespace ml::details
   class storage_iterator;
 
   template<class StorageType>
-  class storage_iterator
-  {
+  class storage_iterator {
   private:
     friend storage_iterator<std::remove_const_t<StorageType>>;
     friend storage_iterator<std::add_const_t<StorageType>>;
 
-    [[no_unique_address]] //
     StorageType* m_ptr = nullptr;
 
   public:
@@ -31,10 +28,10 @@ namespace ml::details
     using iterator_tag = std::random_access_iterator_tag;
     using iterator_concept = std::random_access_iterator_tag;
 
-    static_assert (std::is_same_v<std::remove_const_t<StorageType>, lazy_initialized_storage<value_type>>);
+    static_assert (std::is_same_v<std::remove_const_t<StorageType>, lazy_storage<value_type>>);
 
     // ========================================================================== //
-    // --- Conversions- --------------------------------------------------------- //
+    // --- Conversions ---------------------------------------------------------- //
     // ========================================================================== //
 
     constexpr operator storage_iterator<std::add_const_t<StorageType>> () const //
@@ -50,7 +47,7 @@ namespace ml::details
 
     storage_iterator () = default;
 
-    constexpr explicit                      //
+    explicit constexpr                      //
       storage_iterator (StorageType* first) //
       noexcept                              //
       : m_ptr (first)
