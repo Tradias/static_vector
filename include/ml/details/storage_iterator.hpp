@@ -25,8 +25,8 @@ namespace ml::details
     using pointer = std::conditional_t<std::is_const_v<StorageType>, value_type const*, value_type*>;
     using reference = std::conditional_t<std::is_const_v<StorageType>, value_type const&, value_type&>;
     using difference_type = std::ptrdiff_t;
-    using iterator_tag = std::random_access_iterator_tag;
-    using iterator_concept = std::random_access_iterator_tag;
+    using iterator_tag = std::contiguous_iterator_tag;
+    using iterator_concept = std::contiguous_iterator_tag;
 
     static_assert (std::is_same_v<std::remove_const_t<StorageType>, lazy_storage<value_type>>);
 
@@ -57,8 +57,8 @@ namespace ml::details
     // --- Comparisons ---------------------------------------------------------- //
     // ========================================================================== //
 
-    bool operator== (storage_iterator const&) const = default;
-    auto operator<=> (storage_iterator const&) const = default;
+    friend bool operator== (storage_iterator const&, storage_iterator const&) = default;
+    friend auto operator<=> (storage_iterator const&, storage_iterator const&) = default;
 
     // ========================================================================== //
     // --- Incrementable interface ---------------------------------------------- //
@@ -119,7 +119,7 @@ namespace ml::details
 
     constexpr auto operator+= (std::integral auto delta) //
       noexcept                                           //
-      -> storage_iterator                                //
+      -> storage_iterator&                               //
     {
       m_ptr += delta;
       return *this;
@@ -127,7 +127,7 @@ namespace ml::details
 
     constexpr auto operator-= (std::integral auto delta) //
       noexcept                                           //
-      -> storage_iterator                                //
+      -> storage_iterator&                               //
     {
       m_ptr -= delta;
       return *this;
@@ -172,9 +172,9 @@ namespace ml::details
       return lhs.m_ptr - rhs.m_ptr;
     }
 
-    constexpr auto operator[] (std::integral auto index) //
-      noexcept                                           //
-      -> reference                                       //
+    constexpr auto operator[] (difference_type index) const //
+      noexcept                                              //
+      -> reference                                          //
     {
       return m_ptr[index].value ();
     }

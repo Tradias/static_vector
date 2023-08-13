@@ -5,18 +5,12 @@
 
 namespace ml::details
 {
+  struct DefaultInit {};
+  struct Uninit : DefaultInit {};
+
   template<class ValueT>
-    requires requires
-    {
-      requires (std::is_object_v<ValueT>);
-      requires (!std::is_const_v<ValueT>);
-      requires (!std::is_volatile_v<ValueT>);
-    }
   union lazy_storage final {
   private:
-    struct empty_type {};
-
-    empty_type m_empty {};
     ValueT m_value;
 
   public:
@@ -26,21 +20,33 @@ namespace ml::details
     using reference = ValueT&;
     using const_reference = ValueT const&;
 
-    lazy_storage () = default;
+    lazy_storage ()
+      requires (std::is_trivially_default_constructible_v<ValueT>)
+    = default;
+
+    consteval lazy_storage (DefaultInit) noexcept (std::is_nothrow_default_constructible_v<ValueT>)
+      : m_value ()
+    {}
+
+    constexpr lazy_storage (Uninit) noexcept
+    {}
+
+    constexpr lazy_storage () noexcept (noexcept (lazy_storage (Uninit {}))) : lazy_storage (Uninit {})
+    {}
+
+    constexpr ~lazy_storage ()                            //
+      noexcept                                            //
+      requires (std::is_trivially_destructible_v<ValueT>) //
+    = default;
+
+    constexpr ~lazy_storage () noexcept
+    {}
 
     template<class T>
-    explicit(!std::convertible_to<T, ValueT>)               //
-      constexpr lazy_storage (T&& init)                     //
+    explicit constexpr lazy_storage (T&& init)              //
       noexcept (std::is_nothrow_constructible_v<ValueT, T>) //
       requires (std::constructible_from<ValueT, T>)         //
       : m_value (std::forward<T> (init))
-    {}
-
-    template<class... Args>
-    explicit constexpr lazy_storage (std::in_place_t, Args&&... args) //
-      noexcept (std::is_nothrow_constructible_v<ValueT, Args...>)     //
-      requires (std::constructible_from<ValueT, Args...>)             //
-      : m_value (std::forward<Args> (args)...)
     {}
 
     constexpr auto data () //
@@ -57,57 +63,33 @@ namespace ml::details
       return std::addressof (m_value);
     }
 
-    constexpr auto value () & //
-      noexcept                //
-      -> ValueT&              //
+    constexpr auto value () //
+      noexcept              //
+      -> ValueT&            //
     {
       return m_value;
     }
 
-    constexpr auto value () const& //
-      noexcept                     //
-      -> ValueT const&             //
+    constexpr auto value () const //
+      noexcept                    //
+      -> ValueT const&            //
     {
       return m_value;
     }
-
-    constexpr auto value () &&                                //
-      noexcept (std::is_nothrow_move_constructible_v<ValueT>) //
-      -> ValueT                                               //
-      requires (std::move_constructible<ValueT>)              //
-    {
-      return std::move (m_value);
-    }
-
-    constexpr auto value () const&& = delete;
 
     constexpr void destroy () //
       noexcept                //
     {
-      std::ranges::destroy_at (data ());
-      std::ranges::construct_at (std::addressof (m_empty));
+      if constexpr (!std::is_trivially_destructible_v<value_type>) {
+        std::ranges::destroy_at (data ());
+      }
     }
 
     template<class... Args>
-    constexpr void construct (Args&&... args)                     //
+    constexpr auto construct (Args&&... args)                     //
       noexcept (std::is_nothrow_constructible_v<ValueT, Args...>) //
-      requires (std::constructible_from<ValueT, Args...>)         //
-    {
-      std::ranges::destroy_at (std::addressof (m_empty));
-      std::ranges::construct_at (data (), std::forward<Args> (args)...);
-    }
-
-    template<class... Args>
-    constexpr void reconstruct (Args&&... args)                   //
-      noexcept (std::is_nothrow_constructible_v<ValueT, Args...>) //
-      requires (std::constructible_from<ValueT, Args...>)         //
-    {
-      destroy ();
-      construct (std::forward<Args> (args)...);
-    }
+      -> ValueT&                                                  //
+    { return *std::ranges::construct_at (data (), std::forward<Args> (args)...); }
   };
-
-  template<class T>
-  lazy_storage (T&&) -> lazy_storage<std::remove_cvref_t<T>>;
 
 } // namespace ml::details

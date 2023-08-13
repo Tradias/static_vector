@@ -1,6 +1,7 @@
 #include <ml/static_vector/static_vector.hpp>
 
 #include <span>
+#include <string>
 
 namespace ml
 {
@@ -17,14 +18,6 @@ namespace ml
 
       constexpr auto t2 = static_vector ({1.0f, 2.0f, 3.0f});
       static_assert (std::same_as<decltype (t2), static_vector<float, 3> const>);
-
-      // Deduction from std::array argument
-      constexpr auto std_array = std::array {1, 2, 3};
-      constexpr auto t3 = static_vector (std_array);
-      static_assert (std::same_as<decltype (t3), static_vector<int, 3> const>);
-
-      constexpr auto t4 = static_vector (std::array {1, 2, 3});
-      static_assert (std::same_as<decltype (t4), static_vector<int, 3> const>);
 
       // Deduction from variadic arguments.
       constexpr auto t5 = static_vector (std::in_place, 1, 2, 3);
@@ -90,8 +83,8 @@ namespace ml
 
       // lvalue c-array converting constructor
       constexpr auto t10 = [] () {
-        double array[] {1, 2};
-        return static_vector<int, 5> (array);
+        float array[] {1, 2};
+        return static_vector<double, 5> (array);
       }();
       static_assert (t10 == static_vector ({1, 2}));
     }
@@ -286,8 +279,51 @@ namespace ml
       static_assert (static_vector ({1, 2, 3}) < static_vector ({1, 2, 3, 1}));
     }
 
+    // inline void test9 ()
+    // {
+    //   struct NonDefaultConstructible {
+    //     constexpr NonDefaultConstructible ()
+    //     {}
+    //   };
+    //   static constexpr auto t = [] () {
+    //     auto result = ml::static_vector<NonDefaultConstructible, 3> (1, NonDefaultConstructible {});
+    //     result.clear ();
+    //     return result.empty ();
+    //   }();
+    //   static_assert (t);
+    // }
+
+    inline void test10 ()
+    {
+      constexpr auto t = [] () {
+        auto result = ml::static_vector<std::string, 3> (2, "aasdasdasdasdasdadasdasdaasdasddsaadssd");
+        result.clear ();
+        return result.empty ();
+      }();
+      static_assert (t);
+    }
+
+    static_assert (std::contiguous_iterator<ml::static_vector<double, 3>::iterator>);
+    static_assert (std::contiguous_iterator<ml::static_vector<double, 3>::const_iterator>);
+
+    static_assert (std::is_trivially_copy_constructible_v<ml::static_vector<double, 3>>);
+    static_assert (std::is_trivially_move_constructible_v<ml::static_vector<double, 3>>);
+    static_assert (std::is_trivially_copy_assignable_v<ml::static_vector<double, 3>>);
+    static_assert (std::is_trivially_move_assignable_v<ml::static_vector<double, 3>>);
+    static_assert (std::is_trivially_destructible_v<ml::static_vector<double, 3>>);
+
   } // namespace tests
 } // namespace ml
 
 int main ()
-{}
+{
+  ml::tests::test1 ();
+  ml::tests::test2 ();
+  ml::tests::test3 ();
+  ml::tests::test4 ();
+  ml::tests::test5 ();
+  ml::tests::test6 ();
+  ml::tests::test7 ();
+  // ml::tests::test9 ();
+  ml::tests::test10 ();
+}

@@ -2,25 +2,18 @@
 #include <ml/details/storage_iterator.hpp>
 
 #include <algorithm>
-#include <array>
 #include <stdexcept>
 
 namespace ml
 {
-
   template<class ValueT, std::size_t StaticSize>
-    requires requires
-    {
-      requires (std::is_object_v<ValueT>);
-      requires (!std::is_const_v<ValueT>);
-      requires (!std::is_volatile_v<ValueT>);
-    }
+    requires (std::is_object_v<ValueT> && !std::is_const_v<ValueT> && !std::is_volatile_v<ValueT>)
   class static_vector {
   private:
     using storage_type = details::lazy_storage<ValueT>;
 
     std::size_t m_size {};
-    std::array<storage_type, StaticSize> m_storage {};
+    storage_type m_storage[StaticSize];
 
   public:
     // =============================================================================== //
@@ -49,10 +42,7 @@ namespace ml
      * Default constructor (1/8).
      * Initializes a static_vector of 0 elements.
      */
-    constexpr static_vector ()                                       //
-      noexcept (std::is_nothrow_default_constructible_v<value_type>) //
-      : m_size (0), m_storage {}
-    {}
+    static_vector () = default;
 
     /**
      * Size constructor without initial value (2/8).
@@ -72,7 +62,6 @@ namespace ml
     explicit constexpr static_vector (std::integral auto count) //
       noexcept (false)                                          //
       requires (std::default_initializable<value_type>)         //
-      : static_vector ()
     {
       emplace_back_many (count);
     }
@@ -95,7 +84,6 @@ namespace ml
     constexpr static_vector (std::integral auto count, value_type const& init) //
       noexcept (false)                                                         //
       requires (std::copy_constructible<value_type>)                           //
-      : static_vector ()
     {
       emplace_back_many (count, init);
     }
@@ -121,7 +109,6 @@ namespace ml
     constexpr static_vector (std::in_place_t, Args&&... args)               //
       noexcept ((std::is_nothrow_constructible_v<value_type, Args> && ...)) //
       requires ((std::constructible_from<value_type, Args> && ...))         //
-      : static_vector ()
     {
       constexpr bool is_noexcept = (std::is_nothrow_constructible_v<value_type, Args> && ...);
       if constexpr (is_noexcept) {
@@ -155,15 +142,13 @@ namespace ml
      * but it is not. Lifetime extension doesn't apply, narrow conversion are allowed.
      */
     template<class... Args>
-      requires requires
-      {
+      requires requires {
         requires std::default_initializable<value_type>;
         requires sizeof...(Args) <= StaticSize;
         requires (std::constructible_from<value_type, Args> && ...);
       }
     constexpr static_vector (std::integral auto count, std::in_place_t, Args&&... args) //
       noexcept (false)                                                                  //
-      : static_vector ()
     {
       try {
         (static_cast<void> (emplace_back (std::forward<Args> (args))), ...);
@@ -194,7 +179,6 @@ namespace ml
       requires std::constructible_from<value_type, std::iter_reference_t<It>>
     constexpr static_vector (It first, Sen last) //
       noexcept (false)                           //
-      : static_vector ()
     {
       try {
         while (first != last) {
@@ -222,8 +206,7 @@ namespace ml
      * - std::constructible_from<value_type, std::ranges::range_reference_t<Rng>>.
      */
     template<std::ranges::input_range Rng>
-      requires requires
-      {
+      requires requires {
         requires not std::same_as<std::remove_cvref_t<Rng>, static_vector>;
         requires not std::same_as<std::remove_cvref_t<Rng>, value_type>;
         requires std::constructible_from<value_type, std::ranges::range_reference_t<Rng>>;
@@ -251,8 +234,7 @@ namespace ml
      * static_vector class template arguments are provided.
      */
     template<size_type Count>
-      requires requires
-      {
+      requires requires {
         requires (std::move_constructible<value_type>);
         requires (Count <= StaticSize);
       }
@@ -265,9 +247,9 @@ namespace ml
     // --- Copy constructor ---------------------------------------------------------- //
     // =============================================================================== //
 
-    constexpr static_vector (static_vector const& other) //
-      noexcept                                           //
-      requires (std::copy_constructible<value_type>&& std::is_trivially_copy_constructible_v<value_type>) = default;
+    static_vector (static_vector const& other)                                                             //
+      requires (std::copy_constructible<value_type> && std::is_trivially_copy_constructible_v<value_type>) //
+    = default;
 
     constexpr static_vector (static_vector const& other)          //
       noexcept (std::is_nothrow_copy_constructible_v<value_type>) //
@@ -279,15 +261,13 @@ namespace ml
     // --- Move constructor ---------------------------------------------------------- //
     // =============================================================================== //
 
-    constexpr static_vector (static_vector&& other)                                                       //
-      noexcept                                                                                            //
-      requires (std::move_constructible<value_type>&& std::is_trivially_move_constructible_v<value_type>) //
-      = default;
+    static_vector (static_vector&& other)                                                                  //
+      requires (std::move_constructible<value_type> && std::is_trivially_move_constructible_v<value_type>) //
+    = default;
 
     constexpr static_vector (static_vector&& other)               //
       noexcept (std::is_nothrow_move_constructible_v<value_type>) //
       requires (std::move_constructible<value_type>)              //
-      : static_vector ()
     {
       if constexpr (std::is_nothrow_move_constructible_v<value_type> || !std::copy_constructible<value_type>) {
         std::ranges::construct_at (this, std::move_iterator (other.begin ()), std::move_sentinel (other.end ()));
@@ -299,6 +279,10 @@ namespace ml
     // =============================================================================== //
     // --- Copy assignment ----------------------------------------------------------- //
     // =============================================================================== //
+
+    constexpr static_vector& operator= (static_vector const& other)                           //
+      requires (std::copyable<value_type> && std::is_trivially_copy_assignable_v<value_type>) //
+    = default;
 
     constexpr static_vector& operator= (static_vector const& other) //
       noexcept (std::is_nothrow_copy_constructible_v<value_type>&& std::is_nothrow_copy_assignable_v<value_type>) //
@@ -325,6 +309,10 @@ namespace ml
     // --- Move assignment ----------------------------------------------------------- //
     // =============================================================================== //
 
+    constexpr static_vector& operator= (static_vector&& other)                               //
+      requires (std::movable<value_type> && std::is_trivially_move_assignable_v<value_type>) //
+    = default;
+
     constexpr static_vector& operator= (static_vector&& other) //
       noexcept (std::is_nothrow_move_assignable_v<value_type>  //
           && std::is_nothrow_move_constructible_v<value_type>) //
@@ -347,7 +335,7 @@ namespace ml
     constexpr ~static_vector ()                               //
       noexcept                                                //
       requires (std::is_trivially_destructible_v<value_type>) //
-      = default;
+    = default;
 
     constexpr ~static_vector () //
       noexcept
@@ -583,7 +571,7 @@ namespace ml
       noexcept                                   //
       -> const_iterator                          //
     {
-      return const_iterator (m_storage.data ());
+      return const_iterator (std::data (m_storage));
     }
 
     template<std::same_as<static_vector> T>
@@ -598,7 +586,7 @@ namespace ml
       noexcept                                 //
       -> const_iterator                        //
     {
-      return const_iterator (m_storage.data () + size ());
+      return const_iterator (std::data (m_storage) + size ());
     }
 
     template<std::same_as<static_vector> T>
@@ -613,7 +601,7 @@ namespace ml
       noexcept                            //
       -> iterator                         //
     {
-      return iterator (m_storage.data ());
+      return iterator (std::data (m_storage));
     }
 
     [[nodiscard]] constexpr auto begin () const //
@@ -643,7 +631,7 @@ namespace ml
       noexcept                          //
       -> iterator                       //
     {
-      return iterator (m_storage.data () + size ());
+      return iterator (std::data (m_storage) + size ());
     }
 
     [[nodiscard]] constexpr auto end () const //
@@ -837,8 +825,7 @@ namespace ml
       } else {
         try {
           m_size++;
-          m_storage[m_size - 1].construct (std::forward<Args> (args)...);
-          return m_storage[m_size - 1].value ();
+          return m_storage[m_size - 1].construct (std::forward<Args> (args)...);
         } catch (...) {
           pop_back ();
           throw;
@@ -873,9 +860,9 @@ namespace ml
      *
      * Returns: an iterator that points to the new element.
      */
-    constexpr auto insert (iterator pos, value_type const& init)                  //
-      noexcept (false)                                                            //
-      requires (std::copy_constructible<value_type>&& std::swappable<value_type>) //
+    constexpr auto insert (iterator pos, value_type const& init)                   //
+      noexcept (false)                                                             //
+      requires (std::copy_constructible<value_type> && std::swappable<value_type>) //
     {
       emplace_back (init);
       std::ranges::rotate (pos, end () - 1, end ());
@@ -897,9 +884,9 @@ namespace ml
      *
      * Returns: an iterator that points to the new element.
      */
-    constexpr auto insert (iterator pos, value_type&& init)                       //
-      noexcept (false)                                                            //
-      requires (std::move_constructible<value_type>&& std::swappable<value_type>) //
+    constexpr auto insert (iterator pos, value_type&& init)                        //
+      noexcept (false)                                                             //
+      requires (std::move_constructible<value_type> && std::swappable<value_type>) //
     {
       emplace_back (std::move (init));
       std::ranges::rotate (pos, end () - 1, end ());
@@ -1080,7 +1067,7 @@ namespace ml
      * an iterator to the first inserted element, or @pos if none is inserted..
      */
     template<std::input_iterator It, std::sentinel_for<It> Sen>
-      requires (std::constructible_from<value_type, std::iter_reference_t<It>>&& std::swappable<value_type>) //
+      requires (std::constructible_from<value_type, std::iter_reference_t<It>> && std::swappable<value_type>) //
     constexpr auto insert (iterator pos, It first, Sen last) //
       noexcept (false)                                       //
     {
@@ -1146,17 +1133,10 @@ namespace ml
   template<class ValueT, auto Count>
   static_vector (ValueT const (&arr)[Count]) -> static_vector<ValueT, Count>;
 
-  // Deduce static_vector template parameters from std::array template arguments.
-  template<class ValueT, std::size_t Count>
-  static_vector (std::array<ValueT, Count>&&) -> static_vector<ValueT, Count>;
-
-  template<class ValueT, std::size_t Count>
-  static_vector (std::array<ValueT, Count> const&) -> static_vector<ValueT, Count>;
-
   // Deduce static_vector template parameters from cardinality of variadic
   // arguments.
   template<class Arg1, class... Args>
     requires ((std::common_with<Args, Arg1> && ...))
   static_vector (std::in_place_t, Arg1&&, Args&&...)
-  ->static_vector<std::common_type_t<Arg1, Args...>, sizeof...(Args) + 1>;
+    -> static_vector<std::common_type_t<Arg1, Args...>, sizeof...(Args) + 1>;
 } // namespace ml
